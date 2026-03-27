@@ -234,6 +234,30 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 - **Heartbeat monitoring**: Server sweeps for stale
   connections every 30s, kicks clients with no activity for
   90s.
+- **Direct Messages (1-on-1)**: Full-stack DM implementation.
+  Server: `db/dm_queries.go` with GetOrCreateDMChannel,
+  GetUserDMChannels, OpenDM, CloseDM. REST: `POST /api/v1/dms`,
+  `GET /api/v1/dms`, `DELETE /api/v1/dms/{channelId}`.
+  WebSocket DM events: `dm_channel_open`, `dm_channel_close`.
+  Client: `dm.store.ts` for state, dispatcher handles DM events,
+  "+" button opens member picker to start DMs. DM header shows
+  `@ username` with live status. Auto-reopen on message.
+- **Unified Sidebar Layout**: Single 240px sidebar replacing
+  Discord-style 4-column layout. Sections: Server header →
+  Search → Text Channels → Voice Channels → Direct Messages →
+  Members (drag-to-resize) → Voice Widget → User Bar.
+  Sidebar switches between "channel mode" and "DM mode" with
+  "Back to Server" header in DM mode. Invite button moved to
+  server header. Architecture in `pages/main-page/SidebarArea.ts`.
+- **Quick-Switch Server Overlay**: 🚪 button in UserBar opens
+  overlay showing favorited servers. Click to disconnect and
+  switch via sessionStorage handoff to ConnectPage.
+  Component: `QuickSwitchOverlay.ts`.
+- **OC Neon Glow Theme + Theming System**: New default theme
+  with cyan (#00c8ff) → purple (#7b2fff) gradient. Theme manager
+  in `lib/themes.ts` supports built-in + custom themes via
+  JSON import/export. Accent color picker overrides theme accent.
+  Theme file: `theme-neon-glow.css`. Restored on app startup.
 
 ## Critical Rules (always apply)
 
