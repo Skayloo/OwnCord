@@ -15,7 +15,7 @@ services:
       - default
       - caddy
     labels:
-      caddy: YOUR_DOMAIN
+      caddy: <YOUR_DOMAIN>
       caddy.header.-Server: ""
       caddy.@backend.path: "/api/* /admin* /livekit/* /health"
       caddy.reverse_proxy: "@backend {{upstreams 8443}}"
