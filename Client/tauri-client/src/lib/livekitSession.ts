@@ -400,12 +400,22 @@ export class LiveKitSession {
         return directUrl;
       }
       if (proxyPath.startsWith("/")) {
-        // Remote server: route through the local Rust TLS proxy so WebView2
-        // doesn't reject self-signed certificates on the LiveKit signal WS.
-        const port = await this.ensureLiveKitProxy();
-        const resolved = `ws://127.0.0.1:${port}${proxyPath}`;
-        log.debug("LiveKit URL resolved via TLS proxy", { url: resolved, remoteHost: this.serverHost });
-        return resolved;
+        const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+        if (isTauri) {
+          // Remote server: route through the local Rust TLS proxy so WebView2
+          // doesn't reject self-signed certificates on the LiveKit signal WS.
+          const port = await this.ensureLiveKitProxy();
+          const resolved = `ws://127.0.0.1:${port}${proxyPath}`;
+          log.debug("LiveKit URL resolved via TLS proxy", { url: resolved, remoteHost: this.serverHost });
+          return resolved;
+        } else {
+          // Web browser: connect directly to the host using wss:// (or ws:// for localhost)
+          const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+          const protocol = isHttps || !isLocal ? "wss:" : "ws:";
+          const resolved = `${protocol}//${this.serverHost}${proxyPath}`;
+          log.debug("LiveKit URL resolved via native browser", { url: resolved });
+          return resolved;
+        }
       }
     }
     log.debug("LiveKit URL resolved as passthrough", { url: proxyPath });
@@ -755,7 +765,9 @@ export class LiveKitSession {
     this.serverHost = null;
     this.liveKitProxyPort = null;
     // Stop the Rust-side TLS proxy (fire-and-forget).
-    invoke("stop_livekit_proxy").catch((err) => log.warn("Failed to stop LiveKit proxy", err));
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      invoke("stop_livekit_proxy").catch((err) => log.warn("Failed to stop LiveKit proxy", err));
+    }
   }
 
   setMuted(muted: boolean): void {

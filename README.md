@@ -1,9 +1,3 @@
-![stability-experimental](https://img.shields.io/badge/stability-experimental-orange.svg?style=for-the-badge)
-
-
-![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white)
-![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
-![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?style=for-the-badge&logo=npm&logoColor=white)
 # OwnCord
 
 *The gaming chat platform you actually own.*
@@ -24,25 +18,6 @@ dependencies, works fully on LAN.
   <img src=".github/images/loginpage.png" alt="Login Page" width="340">
   <img src=".github/images/Admin_Panel.png" alt="Admin Panel" width="340">
 </p>
-
-## Quick Start
-
-1. Download `chatserver.exe` and the OwnCord installer from
-   [GitHub Releases](https://github.com/J3vb/OwnCord/releases)
-2. Run `chatserver.exe` — generates `config.yaml` and a `data/`
-   directory (database, TLS certs, uploads, backups) on first run
-3. Open `https://localhost:8443/admin` to create the Owner account
-4. Generate an invite code in the admin panel and share it
-5. Friends install the client, enter your server address
-   (`ip:8443`), and register with the invite code
-> Note: You should locate your active IPv4 via `ipconfig` for Win or `ip a` for Linux, since OwnCord server runs on `0.0.0.0`.
->
-> Example: 192.168.1.2:8443
-
-The client uses TOFU (Trust On First Use) for self-signed
-certificates — it prompts to trust the server on first
-connection, then pins it for future sessions.
-
 
 ## Features
 
@@ -141,6 +116,21 @@ connection, then pins it for future sessions.
 - Accent color picker
 - Quick-switch server overlay for multi-server users
 - Structured logging with JSONL persistence (5-day rotation)
+
+## Quick Start
+
+1. Download `chatserver.exe` and the OwnCord installer from
+   [GitHub Releases](https://github.com/J3vb/OwnCord/releases)
+2. Run `chatserver.exe` — generates `config.yaml` and a `data/`
+   directory (database, TLS certs, uploads, backups) on first run
+3. Open `https://localhost:8443/admin` to create the Owner account
+4. Generate an invite code in the admin panel and share it
+5. Friends install the client, enter your server address
+   (`ip:8443`), and register with the invite code
+
+The client uses TOFU (Trust On First Use) for self-signed
+certificates — it prompts to trust the server on first
+connection, then pins it for future sessions.
 
 ### Voice & Video Setup (Optional)
 

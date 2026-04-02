@@ -130,6 +130,9 @@ function onLogEntry(entry: LogEntry): void {
  */
 export async function initLogPersistence(): Promise<() => void> {
   if (initialized) return () => {};
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return () => {};
+  }
 
   try {
     const baseDir = await appLogDir();

@@ -14,6 +14,9 @@ let tauriListen: ((event: string, handler: (e: { payload: unknown }) => void) =>
 // Dynamically load Tauri APIs (avoids import errors in test/browser env)
 async function ensureTauriApis(): Promise<void> {
   if (tauriInvoke !== null) return;
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return;
+  }
   try {
     const core = await import("@tauri-apps/api/core");
     const event = await import("@tauri-apps/api/event");
@@ -79,6 +82,7 @@ export function createWsClient() {
   let certMismatchBlock = false; // blocks reconnect on TOFU mismatch
   let proxyOpen = false;
   let lastSeq = 0;
+  let browserWs: WebSocket | null = null;
 
   // Deduplication cache for reconnection replay.
   // Active when reconnecting (reconnectAttempt > 0) until auth_ok.
@@ -353,19 +357,78 @@ export function createWsClient() {
 
     setState("connecting");
 
-    await ensureTauriApis();
-    if (tauriInvoke === null) {
-      log.error("Tauri APIs not available, cannot connect WebSocket");
-      setState("disconnected");
-      return;
-    }
-
     const wsUrl = `wss://${cfg.host}/api/v1/ws`;
     log.info("WebSocket connecting", {
       url: wsUrl,
       isReconnect: reconnectAttempt > 0,
       attempt: reconnectAttempt,
     });
+
+    const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    
+    if (!isTauri) {
+      // Use native browser WebSocket when outside Tauri
+      if (browserWs) {
+        browserWs.close();
+      }
+      
+      try {
+        browserWs = new WebSocket(wsUrl);
+      } catch (err) {
+        log.error("Failed to construct WebSocket", err);
+        scheduleReconnect();
+        return;
+      }
+
+      browserWs.onopen = () => {
+        proxyOpen = true;
+        log.info("WebSocket open, sending auth", {
+          host: config?.host ?? "unknown",
+          isReconnect: reconnectAttempt > 0,
+          lastSeq,
+        });
+        if (reconnectAttempt > 0 && lastSeq > 0) {
+          replayDedup = new Set();
+        }
+        setState("authenticating");
+        if (config === null) return;
+        send({ type: "auth", payload: { token: config.token, last_seq: lastSeq } });
+      };
+
+      browserWs.onclose = () => {
+        proxyOpen = false;
+        log.info("WebSocket closed", {
+          host: config?.host ?? "unknown",
+          intentional: intentionalClose,
+        });
+        stopHeartbeat();
+        browserWs = null;
+        if (!intentionalClose) {
+          scheduleReconnect();
+        } else {
+          setState("disconnected");
+        }
+      };
+
+      browserWs.onerror = (err) => {
+        log.warn("WebSocket error (native)", { error: err });
+      };
+
+      browserWs.onmessage = (e) => {
+        if (typeof e.data === "string") {
+          handleMessage(e.data);
+        }
+      };
+      
+      return;
+    }
+
+    await ensureTauriApis();
+    if (tauriInvoke === null) {
+      log.error("Tauri APIs not available, cannot connect WebSocket");
+      setState("disconnected");
+      return;
+    }
 
     // Set up event listeners before connecting
     cleanupEventListeners();
@@ -385,6 +448,15 @@ export function createWsClient() {
   }
 
   function sendRaw(json: string): void {
+    if (browserWs) {
+      if (browserWs.readyState === WebSocket.OPEN) {
+        browserWs.send(json);
+      } else {
+        log.warn("Cannot send, browser WebSocket not open");
+      }
+      return;
+    }
+
     if (tauriInvoke === null || !proxyOpen) {
       log.warn("Cannot send, WebSocket not open");
       return;
@@ -403,7 +475,10 @@ export function createWsClient() {
   }
 
   async function disconnectProxy(): Promise<void> {
-    if (tauriInvoke !== null) {
+    if (browserWs) {
+      browserWs.close();
+      browserWs = null;
+    } else if (tauriInvoke !== null) {
       try {
         await tauriInvoke("ws_disconnect");
       } catch {
@@ -490,7 +565,7 @@ export function createWsClient() {
 
     /** @internal for testing */
     _getWs(): WebSocket | null {
-      return null;
+      return browserWs;
     },
   };
 }

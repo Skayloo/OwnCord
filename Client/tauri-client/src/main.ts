@@ -39,13 +39,15 @@ document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
 });
 
-// F12 or Ctrl+Shift+I opens WebView2 DevTools.
+// F12 or Ctrl+Shift+I opens WebView2 DevTools (if inside Tauri).
 document.addEventListener("keydown", (e) => {
   if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
-    e.preventDefault();
-    void import("@tauri-apps/api/core").then(({ invoke }) => {
-      void invoke("open_devtools");
-    });
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      e.preventDefault();
+      void import("@tauri-apps/api/core").then(({ invoke }) => {
+        void invoke("open_devtools");
+      }).catch(() => {});
+    }
   }
 });
 
@@ -56,7 +58,11 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   const href = (link as HTMLAnchorElement).href;
   if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
-    void openUrl(href);
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      void openUrl(href);
+    } else {
+      window.open(href, "_blank", "noopener,noreferrer");
+    }
   }
 });
 
@@ -229,7 +235,11 @@ function renderPage(pageId: "connect" | "main"): void {
     function getProfileList(): readonly { name: string; host: string; id?: string; username?: string }[] {
       const saved = profileManager.getAll();
       if (saved.length > 0) return saved;
-      // Fallback: show a default local server entry
+      // Fallback: show a default entry based on environment
+      const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+      if (!isTauri) {
+        return [{ name: window.location.hostname, host: window.location.host }];
+      }
       return [{ name: "Local Server", host: "localhost:8443" }];
     }
 

@@ -1,7 +1,16 @@
 // Step 2.13 — REST API Client
 // Uses Tauri's HTTP plugin fetch to bypass self-signed cert rejection in webview.
 
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+async function platformFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+  if (isTauri) {
+    return tauriFetch(input, init);
+  }
+  return window.fetch(input, init);
+}
 import { createLogger } from "./logger";
 import type {
   AuthResponse,
@@ -94,7 +103,7 @@ export function createApiClient(
 
     let res: Response;
     try {
-      res = await fetch(url, init as RequestInit);
+      res = await platformFetch(url, init as RequestInit);
     } catch (fetchErr) {
       log.error(`${label} fetch failed`, { method, path, error: String(fetchErr) });
       if (fetchErr instanceof Error) {
@@ -212,7 +221,7 @@ export function createApiClient(
 
       let res: Response;
       try {
-        res = await fetch(url, init as RequestInit);
+        res = await platformFetch(url, init as RequestInit);
       } catch (fetchErr) {
         log.error("API fetch failed", { method: "POST", path: "/auth/verify-totp", error: String(fetchErr) });
         if (fetchErr instanceof Error) {
@@ -388,7 +397,7 @@ export function createApiClient(
       }
       // Don't set Content-Type — browser sets multipart boundary
 
-      const res = await fetch(url, {
+      const res = await platformFetch(url, {
         method: "POST",
         headers: h,
         body: formData,
@@ -417,8 +426,8 @@ export function createApiClient(
       return request<InviteResponse>("POST", "/invites", data, signal);
     },
 
-    revokeInvite(inviteId: number, signal?: AbortSignal): Promise<void> {
-      return request<void>("DELETE", `/invites/${inviteId}`, undefined, signal);
+    revokeInvite(code: string, signal?: AbortSignal): Promise<void> {
+      return request<void>("DELETE", `/invites/${code}`, undefined, signal);
     },
 
     // ── Emoji ─────────────────────────────────────────────
@@ -489,7 +498,7 @@ export function createApiClient(
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(`https://${targetHost}/api/v1/health`, {
+        const res = await platformFetch(`https://${targetHost}/api/v1/health`, {
           signal: controller.signal,
           danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false },
         } as RequestInit);

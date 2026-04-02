@@ -6,7 +6,7 @@ import "fmt"
 func (d *DB) ListInvites() ([]*Invite, error) {
 	rows, err := d.sqlDB.Query(
 		`SELECT id, code, created_by, max_uses, use_count, expires_at, revoked, created_at
-		 FROM invites ORDER BY created_at DESC`,
+		 FROM invites WHERE revoked = 0 ORDER BY created_at DESC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("ListInvites: %w", err)

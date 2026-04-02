@@ -107,6 +107,27 @@ function isValidStoredData(data: unknown): data is StoredData {
 // ---------------------------------------------------------------------------
 
 export function createTauriBackend(): PersistenceBackend {
+  const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  
+  if (!isTauri) {
+    return {
+      async load(): Promise<StoredData | null> {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (isValidStoredData(parsed)) return parsed;
+        } catch {
+          // ignore
+        }
+        return null;
+      },
+      async save(data: StoredData): Promise<void> {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      },
+    };
+  }
+
   return {
     async load(): Promise<StoredData | null> {
       const { invoke } = await import("@tauri-apps/api/core");

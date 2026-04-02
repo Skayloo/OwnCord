@@ -77,6 +77,10 @@ async function loadState(): Promise<WindowState | null> {
  * Returns a cleanup function.
  */
 export async function initWindowState(): Promise<() => void> {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return () => {};
+  }
+
   let tauriWindow: typeof import("@tauri-apps/api/window") | undefined;
   try {
     tauriWindow = await import("@tauri-apps/api/window");

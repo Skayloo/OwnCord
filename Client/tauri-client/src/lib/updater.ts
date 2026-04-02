@@ -16,6 +16,9 @@ export interface UpdateCheckResult {
 
 /** Check if a newer client version is available on the connected server. */
 export async function checkForUpdate(serverUrl: string): Promise<UpdateCheckResult> {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return { available: false, version: null, body: null };
+  }
   try {
     const result = await invoke<UpdateCheckResult>("check_client_update", {
       serverUrl,
@@ -34,6 +37,9 @@ export async function checkForUpdate(serverUrl: string): Promise<UpdateCheckResu
 
 /** Download and install a pending update, then relaunch the app. */
 export async function downloadAndInstallUpdate(serverUrl: string): Promise<void> {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return;
+  }
   log.info("Downloading and installing update...");
   await invoke("download_and_install_update", { serverUrl });
   log.info("Update installed, relaunching...");

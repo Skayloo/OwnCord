@@ -1,0 +1,69 @@
+
+services:
+  server:
+    build:
+      context: ./Server
+    environment:
+      - OWNCORD_SERVER_PORT=8443
+      - OWNCORD_DATABASE_PATH=data/chatserver.db
+      - OWNCORD_TLS_MODE=off
+      - OWNCORD_SERVER_TRUSTED_PROXIES=["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16"]
+      - OWNCORD_VOICE_LIVEKIT_URL=ws://livekit:7880
+      - OWNCORD_VOICE_LIVEKIT_API_KEY=RANDOM_STRING_20+_SYMBOLS
+      - OWNCORD_VOICE_LIVEKIT_API_SECRET=RANDOM_STRING_32+_SYMBOLS
+    networks:
+      - default
+      - caddy
+    labels:
+      caddy: YOUR_DOMAIN
+      caddy.header.-Server: ""
+      caddy.@backend.path: "/api/* /admin* /livekit/* /health"
+      caddy.reverse_proxy: "@backend {{upstreams 8443}}"
+      caddy.encode: zstd gzip
+    volumes:
+      - owncord_data:/app/data
+    depends_on:
+      - livekit
+
+  client:
+    build:
+      context: ./Client/tauri-client
+    networks:
+      - default
+      - caddy
+    labels:
+      caddy: YOUR_DOMAIN
+      caddy.reverse_proxy: "{{upstreams 80}}"
+      caddy.encode: zstd gzip
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command:
+      - --dev
+      - --bind
+      - 0.0.0.0
+      - --keys
+      - "OWNCORD_VOICE_LIVEKIT_API_KEY: OWNCORD_VOICE_LIVEKIT_API_SECRET"
+    expose:
+      - "7880"
+      - "7881"
+    ports:
+      - "55000-55100:55000-55100/udp"
+    environment:
+      - LIVEKIT_RTC_PORT_RANGE_START=55000
+      - LIVEKIT_RTC_PORT_RANGE_END=55100
+      - LIVEKIT_NODE_IP=IP_OF_SERVER
+      
+      #DON'T FORGET TO PORT-FORWARD 55000-55100 PORTS!!!
+
+volumes:
+  owncord_data:
+  caddy_data:
+  caddy_config:
+
+
+networks:
+  default:
+  caddy:
+    name: caddy
+    external: true

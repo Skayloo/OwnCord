@@ -17,6 +17,9 @@ export interface SavedCredential {
 async function getInvoke(): Promise<
   ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null
 > {
+  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    return null;
+  }
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     return invoke;

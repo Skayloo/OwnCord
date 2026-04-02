@@ -1,0 +1,31 @@
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:2.9.2-alpine
+    ports:
+      #- 80:80
+      - 443:443
+    networks:
+      - caddy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # this volume is needed to keep the certificates
+      # otherwise, new ones will be re-issued upon restart
+      - caddy:/data
+    deploy:
+      labels: # Global options
+        caddy.email: <YOUR_EMAIL>
+      resources:
+        reservations:
+          cpus: "0.1"
+          memory: 200M
+      restart_policy:
+        condition: unless-stopped
+
+networks:
+  caddy:
+    name: caddy
+    attachable: true
+
+volumes:
+  caddy: {}
+
