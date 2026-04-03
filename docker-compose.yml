@@ -32,7 +32,7 @@ services:
       - default
       - caddy
     labels:
-      caddy: YOUR_DOMAIN
+      caddy: <YOUR_DOMAIN>
       caddy.reverse_proxy: "{{upstreams 80}}"
       caddy.encode: zstd gzip
 
